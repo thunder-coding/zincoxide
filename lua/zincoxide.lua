@@ -79,11 +79,11 @@ function M.cd(opts)
   end
   -- Increment score
   vim.fn.system({ M.opts.zoxide_cmd, "add", "--", target })
-  if opts.behaviour == "tabs" then
+  if M.opts.behaviour == "tabs" then
     vim.cmd("tcd " .. target)
-  elseif opts.behaviour == "window" then
+  elseif M.opts.behaviour == "window" then
     vim.cmd("lcd " .. target)
-  elseif opts.behaviour == "global" then
+  elseif M.opts.behaviour == "global" then
     vim.cmd("cd " .. target)
   end
 end
