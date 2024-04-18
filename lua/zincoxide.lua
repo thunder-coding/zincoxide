@@ -18,7 +18,7 @@ function M.setup(opts)
   vim.print(M.opts)
 
   local copts = { nargs = "*", bang = true }
-  if opts.complete then
+  if M.opts.complete then
     copts.complete = M.complete
   end
   vim.api.nvim_create_user_command("Z", M.cd, copts)
