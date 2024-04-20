@@ -2,6 +2,8 @@
 
 Supercharge your neovim cd command with new your existing shell's `zoxide`.
 
+![Demo](/demo.mp4)
+
 # Installation (lazy.nvim)
 
 ```lua
