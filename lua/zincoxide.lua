@@ -1,7 +1,7 @@
 local M = {}
 
 local default_opts = {
-  zoxide_cmd = "/usr/bin/zoxide",
+  zoxide_cmd = "zoxide",
   complete = true,
   behaviour = "tabs",
 }
