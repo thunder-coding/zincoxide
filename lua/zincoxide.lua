@@ -27,12 +27,16 @@ function M.complete(_, cmdline, _)
   local current_path = vim.fn.getcwd()
   local cmd = { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
   local args = vim.api.nvim_parse_cmd(cmdline, {}).args
+  local home = os.getenv("HOME") .. "/"
   if #args > 1 then
     return
   end
   local dir_completes = {}
   if #args == 1 then
     local dir_string = args[1]:match(".*/") or "./"
+    if home ~= nil and vim.startswith(dir_string, "~/") then
+      dir_string = home .. string.sub(dir_string, 3)
+    end
     local dir = vim.loop.fs_opendir(dir_string, nil, 1)
     if dir ~= nil then
       while true do
@@ -59,24 +63,38 @@ function M.complete(_, cmdline, _)
   local zoxide_entries = vim.split(zoxide_output, "\n", { plain = true, trimempty = false })
   local completions = {}
   for _, entry in pairs(dir_completes) do
+    if home ~= nil and vim.startswith(entry, home) then
+      entry = "~/" .. string.sub(entry, #home + 1)
+    end
     completions[#completions + 1] = entry
   end
   for _, entry in pairs(zoxide_entries) do
+    if home ~= nil and vim.startswith(entry, home) then
+      entry = "~/" .. string.sub(entry, #home + 1)
+    end
     completions[#completions + 1] = entry
   end
   return completions
 end
 
 function M.resolve(args)
-  if #args == 0 then
-    return "~"
+  local home = os.getenv("HOME")
+  if #args == 0 or (#args == 1 and args[1] == "~") then
+    return home
   end
-  if
-    #args == 1
-    and (vim.startswith(args[1], "/") or vim.startswith(args[1], ".") or (vim.loop.fs_opendir(args[1]) ~= nil))
-  then
-    return args[1]
+  if #args == 1 then
+    if vim.startswith(args[1], "/") or vim.startswith(args[1], "./") then
+      return args[1]
+    end
+    if home ~= nil and vim.startswith(args[1], "~/") then
+      args[1] = home .. "/" .. string.sub(args[1], 3)
+      goto out
+    end
+    if vim.loop.fs_opendir(args[1]) ~= nil then
+      return vim.loop.fs_realpath(args[1])
+    end
   end
+  ::out::
   local current_path = vim.fn.getcwd()
   local cmd = { M.opts.zoxide_cmd, "query", "--exclude=" .. current_path }
   cmd[#cmd + 1] = "--"
