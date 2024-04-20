@@ -15,7 +15,6 @@ function M.setup(opts)
       M.opts[opt] = opts[opt]
     end
   end
-  vim.print(M.opts)
 
   local copts = { nargs = "*", bang = true }
   if M.opts.complete then
