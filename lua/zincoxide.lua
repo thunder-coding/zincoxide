@@ -26,12 +26,29 @@ end
 
 function M.complete(_, cmdline, _)
   local current_path = vim.fn.getcwd()
-  local cmd = { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path }
-
-  cmd[#cmd + 1] = "--"
+  local cmd = { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
   local args = vim.api.nvim_parse_cmd(cmdline, {}).args
   if #args > 1 then
     return
+  end
+  local dir_completes = {}
+  if #args == 1 then
+    local dir_string = args[1]:match(".*/") or "./"
+    local dir = vim.loop.fs_opendir(dir_string, nil, 1)
+    if dir ~= nil then
+      while true do
+        local entry = vim.loop.fs_readdir(dir)
+        if entry == nil then
+          break
+        end
+        if
+          entry[1].type == "directory"
+          or (entry[1].type == "link" and (vim.loop.fs_opendir(dir_string .. entry[1].name) ~= nil))
+        then
+          dir_completes[#dir_completes + 1] = dir_string .. entry[1].name
+        end
+      end
+    end
   end
   for _, part in pairs(args) do
     cmd[#cmd + 1] = part
@@ -40,13 +57,26 @@ function M.complete(_, cmdline, _)
   if vim.v.shell_error ~= 0 then
     error(zoxide_output)
   end
-  return vim.split(zoxide_output, "\n", { plain = true, trimempty = false })
+  local zoxide_entries = vim.split(zoxide_output, "\n", { plain = true, trimempty = false })
+  local completions = {}
+  for _, entry in pairs(dir_completes) do
+    completions[#completions + 1] = entry
+  end
+  for _, entry in pairs(zoxide_entries) do
+    completions[#completions + 1] = entry
+  end
+  return completions
 end
 
 function M.resolve(args)
-  local params = args
-  if #params == 0 then
+  if #args == 0 then
     return "~"
+  end
+  if
+    #args == 1
+    and (vim.startswith(args[1], "/") or vim.startswith(args[1], ".") or (vim.loop.fs_opendir(args[1]) ~= nil))
+  then
+    return args[1]
   end
   local current_path = vim.fn.getcwd()
   local cmd = { M.opts.zoxide_cmd, "query", "--exclude=" .. current_path }
