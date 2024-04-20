@@ -48,7 +48,10 @@ function M.complete(_, cmdline, _)
           entry[1].type == "directory"
           or (entry[1].type == "link" and (vim.loop.fs_opendir(dir_string .. entry[1].name) ~= nil))
         then
-          dir_completes[#dir_completes + 1] = dir_string .. entry[1].name
+          local x = ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*"
+          if string.match(dir_string .. entry[1].name, x) then
+            dir_completes[#dir_completes + 1] = dir_string .. entry[1].name
+          end
         end
       end
     end
