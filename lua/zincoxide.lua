@@ -63,20 +63,31 @@ function M.complete(_, cmdline, _)
         local entry = vim.loop.fs_readdir(dir)
         -- We've read everything
         if entry == nil then
+          vim.loop.fs_closedir(dir)
           break
         end
         -- Only add to completions if is a directory, also if it is a symlink, try to resolve it and add it too if it is a directory
-        if
-          entry[1].type == "directory"
-          or (entry[1].type == "link" and (vim.loop.fs_opendir(dir_string .. entry[1].name) ~= nil))
-        then
-          -- fuzzy search on steroids
-          local x = ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*"
-          -- Filter completion results to options that match the user string
-          if string.match(dir_string .. entry[1].name, x) then
-            dir_completes[#dir_completes + 1] = dir_string .. entry[1].name
+        local name
+        if entry[1].type == "directory" then
+          name = entry[1].name
+        elseif entry[1].type == "link" then
+          local link_dir = vim.loop.fs_opendir(dir_string .. entry[1].name)
+          if link_dir ~= nil then
+            name = entry[1].name
+            vim.loop.fs_closedir(link_dir)
+          else
+            goto continue
           end
+        else
+          goto continue
         end
+        -- fuzzy search on steroids
+        local x = ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*"
+        -- Filter completion results to options that match the user string
+        if string.match(dir_string .. name, x) then
+          dir_completes[#dir_completes + 1] = dir_string .. name
+        end
+        ::continue::
       end
     end
   end
@@ -138,7 +149,9 @@ function M.resolve(args)
     end
 
     -- If the path exists relative to the current directory, simply cd there instead of looking up in the database. Same behaviour as z
-    if vim.loop.fs_opendir(args[1]) ~= nil then
+    local dir = vim.loop.fs_opendir(args[1])
+    if dir ~= nil then
+      vim.loop.fs_closedir(dir)
       return vim.loop.fs_realpath(args[1])
     end
   end
