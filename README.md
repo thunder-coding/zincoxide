@@ -4,7 +4,7 @@ Supercharge your neovim cd command with new your existing shell's `zoxide`.
 
 ![Demo](demo.gif)
 
-# Installation (lazy.nvim)
+## Installation (lazy.nvim)
 
 ```lua
 {
