@@ -26,7 +26,18 @@ function M.setup(opts)
   end
 
   -- Register the command ':Z'
-  vim.api.nvim_create_user_command("Z", M.cd, copts)
+  vim.api.nvim_create_user_command("Z", function(opts_)
+    M.cd(opts_, M.opts.behaviour)
+  end, copts)
+  vim.api.nvim_create_user_command("Zg", function(opts_)
+    M.cd(opts_, "global")
+  end, copts)
+  vim.api.nvim_create_user_command("Zw", function(opts_)
+    M.cd(opts_, "window")
+  end, copts)
+  vim.api.nvim_create_user_command("Zt", function(opts_)
+    M.cd(opts_, "tabs")
+  end, copts)
 end
 
 -- Provide completions for the cmdline. Only return completions if number of
@@ -185,7 +196,7 @@ function M.resolve(args)
 end
 
 -- The actual function that is executed when ':Z' is called
-function M.cd(opts)
+function M.cd(opts, behaviour)
   local target = M.resolve(opts.fargs)
   if type(target) ~= "string" then
     if opts.bang then
@@ -199,11 +210,11 @@ function M.cd(opts)
   end
   -- Increment score
   vim.fn.system({ M.opts.zoxide_cmd, "add", "--", target })
-  if M.opts.behaviour == "tabs" then
+  if behaviour == "tabs" then
     vim.cmd("tcd " .. target)
-  elseif M.opts.behaviour == "window" then
+  elseif behaviour == "window" then
     vim.cmd("lcd " .. target)
-  elseif M.opts.behaviour == "global" then
+  elseif behaviour == "global" then
     vim.cmd("cd " .. target)
   end
 end

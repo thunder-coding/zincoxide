@@ -23,6 +23,6 @@ Supercharge your neovim cd command with new your existing shell's `zoxide`.
     -- Available options { "tabs", "window", "global" }
     behaviour = "tabs",
   },
-  cmd = { "Z" },
+  cmd = { "Z", "Zg", "Zt", "Zw" },
 }
 ```
