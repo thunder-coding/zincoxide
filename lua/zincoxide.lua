@@ -46,17 +46,52 @@ end
 -- parts of strings of entries in zoxide's database
 function M.complete(_, cmdline, _)
   local current_path = vim.fn.getcwd()
-  local cmd = { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
+  local cmd =
+    { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
   local args = vim.api.nvim_parse_cmd(cmdline, {}).args
   local home = os.getenv("HOME") .. "/"
+  vim.print(args)
 
   -- If number of arguments passed to ':Z' is greater than 1, we cannot provide
   -- completions as you can pass almost anything to 'z', and anyways z doesn't
   -- even provide completions so we are doing more than what's needed :)
   if #args > 1 then
-    return
+    return {}
   end
+
   local dir_completes = {}
+
+  if #args == 0 then
+    local dir = vim.loop.fs_opendir(current_path, nil, 1)
+    while true do
+      local entry = vim.loop.fs_readdir(dir)
+      -- We've read everything
+      if entry == nil then
+        vim.loop.fs_closedir(dir)
+        break
+      end
+
+      -- Only add to completions if is a directory, also if it is a symlink, try to resolve it and add it too if it is a directory
+      local name
+      if entry[1].type == "directory" then
+        name = entry[1].name
+      elseif entry[1].type == "link" then
+        local link_dir =
+          vim.loop.fs_opendir(current_path .. "/" .. entry[1].name)
+        if link_dir ~= nil then
+          name = entry[1].name
+          vim.loop.fs_closedir(link_dir)
+        else
+          goto continue
+        end
+      else
+        goto continue
+      end
+      dir_completes[#dir_completes + 1] = name
+      ::continue::
+    end
+  end
+
   -- If exactly one argument is passed, we can do our best to complete its
   -- Completion item can be a relative directory, absolute directory or any of
   -- the entries in zoxide's database
@@ -102,10 +137,6 @@ function M.complete(_, cmdline, _)
       end
     end
   end
-  -- Do not complete anything if more than one arg
-  if #args > 1 then
-    return {}
-  end
   -- Do not pass any arguments to zoxide since we are using a hacky fuzzy search whereas zoxide doesn't do fuzzy search
   local zoxide_output = vim.fn.system(cmd)
   -- Although this should not happen, but let's just handle it just in case
@@ -113,7 +144,8 @@ function M.complete(_, cmdline, _)
     error(zoxide_output)
   end
   -- Read the directories in zoxide database and separate each entry
-  local zoxide_entries = vim.split(zoxide_output, "\n", { plain = true, trimempty = false })
+  local zoxide_entries =
+    vim.split(zoxide_output, "\n", { plain = true, trimempty = false })
   local completions = {}
   -- we just converted the tilde earlier to HOME, as vim.loop doesn't understand it. So let's convert back
   for _, entry in pairs(dir_completes) do
@@ -128,7 +160,13 @@ function M.complete(_, cmdline, _)
       entry = "~/" .. string.sub(entry, #home + 1)
     end
     -- Fuzzy search on steroids part2
-    if #args == 1 and string.match(entry, ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*") then
+    if
+      #args == 1
+      and string.match(
+        entry,
+        ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*"
+      )
+    then
       completions[#completions + 1] = entry
     end
   end
@@ -147,22 +185,25 @@ function M.resolve(args)
   end
 
   if #args == 1 then
-    -- Return as is if it is an absolute or relative path, do not try to verify if it exists or not
-    -- NOTE: z has a different behaviour where it tries to resolve if the directory doesn't exist. We might have to do that in future
-    if vim.startswith(args[1], "/") or vim.startswith(args[1], "./") then
+    -- Return as is if it is relative path, do not try to verify if it exists or not
+    if vim.startswith(args[1], "./") then
       return args[1]
     end
 
-    -- We got a tilde expansion, expand and return don't ask zoxide to resolve it for us.
-    -- NOTE: z has a different behaviour where it tries to resolve if the directory doesn't exist. We might have to do that in future
+    -- Most shells expand the tilde expression themselves, so the behaviour which we get is the same as the below case, but zoxide doesn't understand the '~' character as "$HOME" as '~' is a valid character that can be used to name files and directories on a lot of filesystems, so have to expand it ourselves
     if home ~= nil and vim.startswith(args[1], "~/") then
-      return home .. "/" .. string.sub(args[1], 3)
+      args[1] = home .. "/" .. string.sub(args[1], 3)
     end
 
-    -- If the path exists relative to the current directory, simply cd there instead of looking up in the database. Same behaviour as z
+    -- If an absolute path, first check if destination is a directory, if directory then return it
+    -- If not a directory, then ask zoxide to resolve it
+    -- If the path exists relative to the current directory, simply cd there instead of looking up in the database.
     local dir = vim.loop.fs_opendir(args[1])
     if dir ~= nil then
       vim.loop.fs_closedir(dir)
+      -- This is needed as relative directories need to be resolved for
+      -- `zoxide add` to work properly, or else the matching one will not be the
+      -- relative directory where we just cd into
       return vim.loop.fs_realpath(args[1])
     end
   end
