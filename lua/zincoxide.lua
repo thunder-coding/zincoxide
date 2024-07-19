@@ -50,7 +50,6 @@ function M.complete(_, cmdline, _)
     { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
   local args = vim.api.nvim_parse_cmd(cmdline, {}).args
   local home = os.getenv("HOME") .. "/"
-  vim.print(args)
 
   -- If number of arguments passed to ':Z' is greater than 1, we cannot provide
   -- completions as you can pass almost anything to 'z', and anyways z doesn't
