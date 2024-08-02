@@ -44,7 +44,7 @@ end
 -- arguments is 1
 -- We can't complete multiple arguments as generally all the arguments are
 -- parts of strings of entries in zoxide's database
-function M.complete(_, cmdline, _)
+function M.complete(arglead, cmdline, _)
   local current_path = vim.fn.getcwd()
   local cmd =
     { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
@@ -54,7 +54,7 @@ function M.complete(_, cmdline, _)
   -- If number of arguments passed to ':Z' is greater than 1, we cannot provide
   -- completions as you can pass almost anything to 'z', and anyways z doesn't
   -- even provide completions so we are doing more than what's needed :)
-  if #args > 1 then
+  if #args > 1 or (#args == 1 and #arglead == 0) then
     return {}
   end
 
