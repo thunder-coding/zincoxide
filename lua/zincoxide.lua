@@ -62,6 +62,9 @@ function M.complete(arglead, cmdline, _)
 
   if #args == 0 then
     local dir = vim.loop.fs_opendir(current_path, nil)
+    if dir == nil then
+      goto end_dirsearch
+    end
     while true do
       local entry = vim.loop.fs_readdir(dir)
       -- We've read everything
@@ -89,6 +92,7 @@ function M.complete(arglead, cmdline, _)
       dir_completes[#dir_completes + 1] = name
       ::continue::
     end
+    ::end_dirsearch::
   end
 
   -- If exactly one argument is passed, we can do our best to complete its
@@ -242,6 +246,7 @@ function M.cd(opts, behaviour)
     if opts.bang then
       return
     end
+    ---@cast target -nil
     if target[2] == -1 then
       error("zoxide binary (" .. M.opts.zoxide_cmd .. ") could not be executed")
     elseif target[2] ~= 0 then
