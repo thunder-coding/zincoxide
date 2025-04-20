@@ -61,7 +61,7 @@ function M.complete(arglead, cmdline, _)
   local dir_completes = {}
 
   if #args == 0 then
-    local dir = vim.loop.fs_opendir(current_path, nil, 1)
+    local dir = vim.loop.fs_opendir(current_path, nil)
     while true do
       local entry = vim.loop.fs_readdir(dir)
       -- We've read everything
@@ -101,7 +101,7 @@ function M.complete(arglead, cmdline, _)
     if home ~= nil and vim.startswith(dir_string, "~/") then
       dir_string = home .. string.sub(dir_string, 3)
     end
-    local dir = vim.loop.fs_opendir(dir_string, nil, 1)
+    local dir = vim.loop.fs_opendir(dir_string, nil)
     -- If this is a directory, read it and provide the completions for directories in the directory which the user has typed out
     if dir ~= nil then
       while true do
