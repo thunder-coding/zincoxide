@@ -1,4 +1,5 @@
 local M = {}
+local fuzzy_match = require("utils.fuzzy_match")
 
 local default_opts = {
   zoxide_cmd = "zoxide",
@@ -50,6 +51,7 @@ function M.complete(arglead, cmdline, _)
     { M.opts.zoxide_cmd, "query", "-l", "--exclude=" .. current_path, "--" }
   local args = vim.api.nvim_parse_cmd(cmdline, {}).args
   local home = os.getenv("HOME") .. "/"
+  local shrink_home = true
 
   -- If number of arguments passed to ':Z' is greater than 1, we cannot provide
   -- completions as you can pass almost anything to 'z', and anyways z doesn't
@@ -99,6 +101,9 @@ function M.complete(arglead, cmdline, _)
   -- Completion item can be a relative directory, absolute directory or any of
   -- the entries in zoxide's database
   if #args == 1 then
+    if vim.startswith(args[1], "./") or vim.startswith(args[1], "~/") or vim.startswith then
+      shrink_home = false
+    end
     -- Get the last directory we can make out of from the string
     local dir_string = args[1]:match(".*/") or "./"
     -- Expand the tilde expression to home
@@ -130,10 +135,7 @@ function M.complete(arglead, cmdline, _)
         else
           goto continue
         end
-        -- fuzzy search on steroids
-        local x = ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*"
-        -- Filter completion results to options that match the user string
-        if string.match(dir_string .. name, x) then
+        if fuzzy_match(dir_string .. name, args[1]) then
           dir_completes[#dir_completes + 1] = dir_string .. name
         end
         ::continue::
@@ -152,24 +154,17 @@ function M.complete(arglead, cmdline, _)
   local completions = {}
   -- we just converted the tilde earlier to HOME, as vim.loop doesn't understand it. So let's convert back
   for _, entry in pairs(dir_completes) do
-    if home ~= nil and vim.startswith(entry, home) then
+    if shrink_home and home ~= nil and vim.startswith(entry, home) then
       entry = "~/" .. string.sub(entry, #home + 1)
     end
     completions[#completions + 1] = entry
   end
   -- zoxide will return full path, so let's just replace the user directory with shorthand tilde notation to make the suggestions size smaller on screen.
   for _, entry in pairs(zoxide_entries) do
-    if home ~= nil and vim.startswith(entry, home) then
+    if shrink_home and home ~= nil and vim.startswith(entry, home) then
       entry = "~/" .. string.sub(entry, #home + 1)
     end
-    -- Fuzzy search on steroids part2
-    if
-      #args == 1
-      and string.match(
-        entry,
-        ".*" .. table.concat(vim.split(args[1], ""), ".*") .. ".*"
-      )
-    then
+    if #args == 1 and fuzzy_match(entry, args[1]) then
       completions[#completions + 1] = entry
     end
   end
