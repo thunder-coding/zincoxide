@@ -101,7 +101,7 @@ function M.complete(arglead, cmdline, _)
   -- Completion item can be a relative directory, absolute directory or any of
   -- the entries in zoxide's database
   if #args == 1 then
-    if vim.startswith(args[1], "./") or vim.startswith(args[1], "~/") or vim.startswith then
+    if vim.startswith(args[1], "./") or vim.startswith(args[1], "~/") or vim.startswith(args[1], "/") then
       shrink_home = false
     end
     -- Get the last directory we can make out of from the string
