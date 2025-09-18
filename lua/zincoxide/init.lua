@@ -1,5 +1,5 @@
 local M = {}
-local fuzzy_match = require("utils.fuzzy_match")
+local fuzzy_match = require("zincoxide.utils.fuzzy_match")
 
 local default_opts = {
   zoxide_cmd = "zoxide",
